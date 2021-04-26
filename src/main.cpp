@@ -28,10 +28,9 @@ bool WiFiNotSet = true;
 #define yearDigits 4
 
 //Set Parameters for serial communication
-#define setupInfoParam 0 //error avoidance
 #define receiveAnalyticsParam 1 //receive analytics
 #define receiveNetworkParam 2 // receive network
-#define receivePillInfoParam 3 //error avoidance
+#define receivePillInfoParam 3
 #define sendAddReminderParam 4 // send reminder
 #define receiveAddReminderParam 4 //receive reminder
 #define sendRemoveReminderParam 5 // send reminder
@@ -39,7 +38,7 @@ bool WiFiNotSet = true;
 #define sendRefillParam 6 //send refill
 #define receiveRefillParam 6 //receive refill
 #define sendAddPillParam 7 //send add
-#define receiveAddParam 7 //receive add
+#define receiveAddPillParam 7 //receive add
 #define sendRemovePillParam 8 //send remove
 #define receiveRemovePillParam 8 //receive remove
 
@@ -57,8 +56,6 @@ StaticJsonDocument<JSON_SIZE> doc;
 JsonObject object;
 
 String json;
-
-bool updatedFields = false;
 
 void sendRefillUART();
 void sendRemoveReminderUART();
@@ -159,8 +156,6 @@ void deserializeJSONtoObject() //base JSON POST request handler for the ESP8266 
   {
     deserializeJson(doc, server.arg("plain")); // assuming the POST body is JSON formatted
     object = doc.as<JsonObject>();
-
-    updatedFields = true;
   }
 }
 
@@ -298,8 +293,6 @@ void sendAddReminderUART() // sends reminder arguments to MCU through UART
   if (pillContainersCount >= 2)
     Serial.print(object["pillQuantities"][pillContainersCount - 1].as<int>()); //runs if pillContainersCount is at least 2
   Serial.print("]\n");
-
-  updatedFields = false;
 }
 
 void sendRemoveReminderUART() // sends reminder arguments to MCU through UART
@@ -334,8 +327,6 @@ void sendRemoveReminderUART() // sends reminder arguments to MCU through UART
   if (pillContainersCount >= 2)
     Serial.print(object["pillQuantities"][pillContainersCount - 1].as<int>()); //runs if pillContainersCount is at least 2
   Serial.print("]\n");
-
-  updatedFields = false;
 }
 
 void sendRefillUART() // sends refill arguments to MCU through UART
@@ -360,8 +351,6 @@ void sendRefillUART() // sends refill arguments to MCU through UART
   if (pillContainersCount >= 2)
     Serial.print(object["pillQuantities"][pillContainersCount - 1].as<int>()); //runs if pillContainersCount is at least 2
   Serial.print("]\n");
-
-  updatedFields = false;
 }
 
 void sendAddPillUART() // sends add arguments to MCU through UART
@@ -380,8 +369,6 @@ void sendAddPillUART() // sends add arguments to MCU through UART
   Serial.print(object["pillQuantity"].as<int>());
 
   Serial.print(" \n");
-
-  updatedFields = false;
 }
 
 void sendRemovePillUART() // sends remove arguments to MCU through UART 
@@ -394,8 +381,6 @@ void sendRemovePillUART() // sends remove arguments to MCU through UART
   delay(10);
   Serial.print(object["pillName"].as<char *>());
   Serial.print(" ");
-
-  updatedFields = false;
 }
 
 // UART RX functions
@@ -591,7 +576,7 @@ bool receiveAddRemindersUART() // receives alarm arguments from MCU through UART
 
 bool receiveRemoveRemindersUART() // receives alarm arguments from MCU through UART
 {
-  // storeIndex: Hour: Minute: pillQuantities:[0,0,0,0,0,0,0,0]
+  // storeIndex:1
   if (debug) Serial.printf("\nEntered param = %d\n", receiveRemoveReminderParam);
   int storeIndex = 0;
   if (Serial.find("storeIndex:"))
@@ -964,7 +949,7 @@ void handleUARTRX() // RX function to check params for a UART transmission and r
   case receiveRefillParam: //receive refill
     receiveRefillUART();
     break;
-  case receiveAddParam: //receive add
+  case receiveAddPillParam: //receive add
     receiveAddPillUART();
     break;
   case receiveRemovePillParam: //receive remove
