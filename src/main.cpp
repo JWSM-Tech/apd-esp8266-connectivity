@@ -78,10 +78,13 @@ int *readnIntList(char digitCount, int *list, int listLength);
 void post_DB(String json);
 void Analytics_to_JSON();
 void Pill_Status_to_JSON();
+void Reminders_to_JSON();
 
-char ssid[SSID_SIZE] = "SweetPotatoJam"; //  your network SSID (name)
+void CORS();
 
-char password[PASSWORD_SIZE] = "jEVezYP92*BRPiyC8zxhceAF"; // your network password
+char ssid[SSID_SIZE] = "ELMEGANETWORK"; //  your network SSID (name)
+
+char password[PASSWORD_SIZE] = "123abcgg"; // your network password
 
 const char *rest_host = "http://apd-webapp-backend.herokuapp.com/api/analytics";
 
@@ -132,17 +135,32 @@ void handleRoot() // handle GET request to apdwifimodule.local
   server.send(200, "text/plain", "hello from apdwifimodule.local");
 }
 
-void handleRefillGET() //Handle Refill GET call from web application and send pill names and quantity data
+void handlePillInfoGET() //Handle Refill GET call from web application and send pill names and quantity data
 {
   if (debug)
-    Serial.println("Entered handleRefillGET");
+    Serial.println("Entered handlePillInfoGET");
   
   Pill_Status_to_JSON();
+  CORS();
+  server.send(200, "application/json", json);
+}
+
+void handleRemindersInfoGET() //Handle Refill GET call from web application and send pill names and quantity data
+{
+  if (debug)
+    Serial.println("Entered handleRemindersInfoGET");
+  
+  Reminders_to_JSON();
+  CORS();
+  server.send(200, "application/json", json);
+}
+
+void CORS()
+{
   server.sendHeader("Access-Control-Allow-Origin", "*");
   server.sendHeader("Access-Control-Max-Age", "10000");
-  server.sendHeader("Access-Control-Allow-Methods", "PUT,POST,GET,OPTIONS");
+  server.sendHeader("Access-Control-Allow-Methods", "PUT,POST,GET,DELETE,OPTIONS");
   server.sendHeader("Access-Control-Allow-Headers", "*");
-  server.send(200, "application/json", json);
 }
 
 // server POST handler functions
@@ -164,10 +182,10 @@ void handleAddReminderPOST() // handle POST request from reminders to apdwifimod
   if (debug)
     Serial.println("Entered handleAddReminderPOST");
   param = sendAddReminderParam;
-  sendAddReminderUART();
   deserializeJSONtoObject();
+  sendAddReminderUART();
 
-  while(!receiveAddRemindersUART()) delay(1000);
+  while(!receiveAddRemindersUART()) delay(3000);
 
   server.send(201, "text/plain", "the fields have been updated");
 }
@@ -177,10 +195,10 @@ void handleRemoveReminderPOST() // handle POST for delete request from reminders
   if (debug)
     Serial.println("Entered handleRemoveReminderPOST");
   param = sendRemoveReminderParam;
-  sendRemoveReminderUART();
   deserializeJSONtoObject();
+  sendRemoveReminderUART();
 
-  while(!receiveRemoveRemindersUART()) delay(1000);
+  while(!receiveRemoveRemindersUART()) delay(3000);
 
   server.send(201, "text/plain", "the fields have been updated");
 }
@@ -190,9 +208,9 @@ void handleAddPillPOST() //Handle Add POST call from web application
   if (debug)
     Serial.println("Entered handleAddPillPOST");
   param = sendAddPillParam;
-  sendAddPillUART();
   deserializeJSONtoObject();
-  while(!receiveAddPillUART()) delay(1000);
+  sendAddPillUART();
+  while(!receiveAddPillUART()) delay(3000);
 
   server.send(201, "text/plain", "the fields have been updated");
 }
@@ -202,9 +220,11 @@ void handleRemovePillPOST() //Handle Add POST call from web application
   if (debug)
     Serial.println("Entered handleRemovePillPOST");
   param = sendRemovePillParam;
-  sendRemovePillUART();
+
+  CORS();
   deserializeJSONtoObject();
-  while(!receiveRemovePillUART()) delay(1000);
+  sendRemovePillUART();
+  while(!receiveRemovePillUART()) delay(3000);
 
   server.send(201, "text/plain", "the fields have been updated");
 }
@@ -216,10 +236,11 @@ void handleRefillPOST() //Handle Refill POST call from web application
   param = sendRefillParam;
   sendRefillUART();
   deserializeJSONtoObject();
-  while(!receiveRefillUART()) delay(1000);
+  while(!receiveRefillUART()) delay(3000);
 
   server.send(201, "text/plain", "the fields have been updated");
 }
+
 
 //server NOT FOUND handler functions
 void handleNotFound() //Handle NotFound resources in apdwifimodule.local
@@ -316,17 +337,7 @@ void sendRemoveReminderUART() // sends reminder arguments to MCU through UART
   delay(10);
   Serial.print(" ");
 
-  Serial.print("pillQuantities:[");
-
-  for (int i = 0; i < pillContainersCount - 1; i++)
-  {
-    delay(10);
-    Serial.print(object["pillQuantities"][i].as<int>());
-    Serial.print(",");
-  }
-  if (pillContainersCount >= 2)
-    Serial.print(object["pillQuantities"][pillContainersCount - 1].as<int>()); //runs if pillContainersCount is at least 2
-  Serial.print("]\n");
+  Serial.print("\n");
 }
 
 void sendRefillUART() // sends refill arguments to MCU through UART
@@ -736,7 +747,7 @@ bool receiveRemovePillUART() // receives remove pill parameters through UART
   { 
     storeIndex = readnInt(1);
     if (debug)
-      Serial.printf("Add Pill Index = %d\n", storeIndex);
+      Serial.printf("Remove Pill Index = %d\n", storeIndex);
   }
   else
   {
@@ -814,7 +825,7 @@ void WiFi_setup() // Sets up WiFi using SSID and PASSWORD set
   {
 
     Serial.print(".");
-    delay(1000);
+    delay(3000);
   }
   if (debug)
     Serial.println("\nMDNS has started");
@@ -989,24 +1000,21 @@ void setup() // put your setup code here, to run once:
   //setup Routes
   server.on("/", HTTP_GET, handleRoot);
   server.on("/submit_reminder_data", HTTP_POST, handleAddReminderPOST);
-  server.on("/get_pill_status", HTTP_GET, handleRefillGET);
+  server.on("/get_pill_status", HTTP_GET, handlePillInfoGET);
+  server.on("/get_reminders", HTTP_GET, handleRemindersInfoGET);
   server.on("/submit_refill_data", HTTP_POST, handleRefillPOST);
   server.on("/submit_add_data", HTTP_POST, handleAddPillPOST);
+  server.on("/remove_pill", HTTP_POST, handleRemovePillPOST);
+  server.on("/remove_reminder", HTTP_POST, handleRemoveReminderPOST);
 
   server.on("/", HTTP_OPTIONS, []() {
-    server.sendHeader("Access-Control-Allow-Origin", "*");
-    server.sendHeader("access-control-allow-credentials", "false");
-    server.sendHeader("Access-Control-Allow-Headers", "*");
-    server.sendHeader("access-control-allow-methods", "GET,OPTIONS");
+    CORS();
     server.send(204);
   });
 
   server.on("/get_pill_status", HTTP_OPTIONS, []() {
     // server.sendHeader("Content-Type", "application/json");
-    server.sendHeader("Access-Control-Allow-Origin", "*");
-    server.sendHeader("Access-Control-Max-Age", "10000");
-    server.sendHeader("Access-Control-Allow-Methods", "PUT,POST,GET,OPTIONS");
-    server.sendHeader("Access-Control-Allow-Headers", "*");
+    CORS();
     server.send(204, "application/json");
   });
 
@@ -1026,7 +1034,7 @@ void post_DB(String json) // posts JSON to REST API running on rest_host
     if (debug)
       Serial.println("WiFi is not connected");
 
-    delay(1000);
+    delay(3000);
   }
 
   if (WiFi.status() == WL_CONNECTED)
@@ -1147,6 +1155,36 @@ void Pill_Status_to_JSON() // generates JSON from refill struct
     pillQuantitiesArr.add(fill.pillQuantities[i]);
 
   serializeJson(Refilldoc, json);
+  if(debug) Serial.println("json is " + json);
+}
+
+void Reminders_to_JSON()
+{
+  json = "";
+  //            'hour':schedule[i].hour
+  //            'minute':schedule[i].minute
+  //            'pillQuantities': schedule[i].pillQuantities
+
+  // JsonObject remixnders = Reminderdoc.createNestedObject("reminders");
+  DynamicJsonDocument Reminderdoc(2048);
+
+  JsonArray RemindersArr = Reminderdoc.createNestedArray("reminders");
+
+  JsonObject obj[8];
+
+  for(int i=0; i<pillContainersCount; i++)
+  {
+    obj[i] = RemindersArr.createNestedObject();
+    obj[i]["hour"] = schedule[i].hour;
+    obj[i]["minute"] = schedule[i].minute;
+    JsonArray pillQuantitiesArr = obj[i].createNestedArray("pillQuantities");
+    for (int j = 0; j < pillContainersCount; j++) pillQuantitiesArr.add(schedule[i].pillQuantities[j]);
+
+  }
+
+  serializeJson(RemindersArr, json);
+
+  if(debug) Serial.println("json is " + json);
 }
 
 void loop() // main code to run repeatedly: 
