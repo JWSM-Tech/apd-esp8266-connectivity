@@ -357,11 +357,6 @@ void sendRefillUART() // sends refill arguments to MCU through UART
   {
     delay(10);
     Serial.print(object["pillQuantities"][i].as<int>());
-
-    if (object["pillQuantities"][i].as<int>() > 0)
-    {
-      fill.pillQuantities[i] = object["pillQuantities"][i].as<int>();
-    }
     Serial.print(",");
   }
   if (pillContainersCount >= 2)
@@ -591,6 +586,7 @@ bool receiveAddRemindersUART() // receives alarm arguments from MCU through UART
   }
 
   Serial.find(sep_character);
+  json = "";
   return true;
 }
 
@@ -616,6 +612,7 @@ bool receiveRemoveRemindersUART() // receives alarm arguments from MCU through U
   for(int i=0; i< pillContainersCount; i++) schedule[storeIndex].pillQuantities[i] = 0;
   
   Serial.find(sep_character);
+  json = "";
   return true;
 }
 
@@ -692,7 +689,7 @@ bool receiveRefillUART() // receives pill quanitites to update
     Serial.find("]");
   }
   else return false;
-
+  json = "";
   return true;
 }
 
@@ -744,6 +741,7 @@ bool receiveAddPillUART() // receives add pill parameters through UART
   }
 
   Serial.find(sep_character);
+  json = "";
   return true;
 }
 
