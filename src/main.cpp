@@ -44,7 +44,7 @@ bool WiFiNotSet = true;
 
 #define sep_character ' '
 
-#define debug true
+#define debug false
 
 const int RX_pin = 13;
 const int TX_pin = 15;
@@ -93,13 +93,14 @@ char str[200];
 char temp_original_date[20];
 char temp_taken_date[20];
 
+#define dlay delay(5000);
+
 struct alarm //hour, minute, pillQuantities
 {
 
   unsigned char hour;
   unsigned char minute;
   int pillQuantities[pillContainersCount];
-  // char pillNames[pillContainersCount][maxPillName]; //remove pillNames from alarm
 };
 
 struct refill //pillNames and pillQuantities
@@ -185,7 +186,8 @@ void handleAddReminderPOST() // handle POST request from reminders to apdwifimod
   deserializeJSONtoObject();
   sendAddReminderUART();
 
-  while(!receiveAddRemindersUART()) delay(3000);
+  while(!Serial.available()) dlay;
+  receiveAddRemindersUART();
 
   server.send(201, "text/plain", "the fields have been updated");
 }
@@ -197,8 +199,8 @@ void handleRemoveReminderPOST() // handle POST for delete request from reminders
   param = sendRemoveReminderParam;
   deserializeJSONtoObject();
   sendRemoveReminderUART();
-
-  while(!receiveRemoveRemindersUART()) delay(3000);
+  while(!Serial.available()) dlay;
+  receiveRemoveRemindersUART();
 
   server.send(201, "text/plain", "the fields have been updated");
 }
@@ -210,8 +212,9 @@ void handleAddPillPOST() //Handle Add POST call from web application
   param = sendAddPillParam;
   deserializeJSONtoObject();
   sendAddPillUART();
-  while(!receiveAddPillUART()) delay(3000);
-
+  while(!Serial.available()) dlay;
+  receiveAddPillUART();
+  //Serial.print("done");
   server.send(201, "text/plain", "the fields have been updated");
 }
 
@@ -224,7 +227,8 @@ void handleRemovePillPOST() //Handle Add POST call from web application
   CORS();
   deserializeJSONtoObject();
   sendRemovePillUART();
-  while(!receiveRemovePillUART()) delay(3000);
+  while(!Serial.available()) dlay;
+  receiveRemovePillUART();
 
   server.send(201, "text/plain", "the fields have been updated");
 }
@@ -236,7 +240,8 @@ void handleRefillPOST() //Handle Refill POST call from web application
   param = sendRefillParam;
   sendRefillUART();
   deserializeJSONtoObject();
-  while(!receiveRefillUART()) delay(3000);
+  while(!Serial.available()) dlay;
+  receiveRefillUART();
 
   server.send(201, "text/plain", "the fields have been updated");
 }
@@ -377,7 +382,11 @@ void sendAddPillUART() // sends add arguments to MCU through UART
 
   Serial.print("pillQuantity:");
   delay(10);
-  Serial.print(object["pillQuantity"].as<int>());
+  char q = object["pillQuantity"].as<int>();
+  if(q<10)
+    Serial.printf("0%d", q);
+  else
+    Serial.printf("%d", q);
 
   Serial.print(" \n");
 }
@@ -825,7 +834,7 @@ void WiFi_setup() // Sets up WiFi using SSID and PASSWORD set
   {
 
     Serial.print(".");
-    delay(3000);
+    dlay;
   }
   if (debug)
     Serial.println("\nMDNS has started");
@@ -967,7 +976,7 @@ void handleUARTRX() // RX function to check params for a UART transmission and r
     receiveRemovePillUART();
     break;
   }
-
+  dlay;
   param = 0;
   if (debug)
     Serial.print("\nFINISHED RX\n");
@@ -1034,7 +1043,7 @@ void post_DB(String json) // posts JSON to REST API running on rest_host
     if (debug)
       Serial.println("WiFi is not connected");
 
-    delay(3000);
+    dlay;
   }
 
   if (WiFi.status() == WL_CONNECTED)
